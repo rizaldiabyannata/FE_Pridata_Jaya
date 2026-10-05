@@ -142,8 +142,11 @@ export default function StorePurchaseOrderPage() {
 		setSuccess("");
 		try {
 			// The server remains authoritative, but refresh the displayed balance at
-			// the last possible moment after a newly approved return.
-			const freshBalance = useStoreCredit ? await storeCreditsService.getTokoBalance(storeId) : null;
+			// the last possible moment after a newly approved return. Display only:
+			// a failed refresh must not stop the order.
+			const freshBalance = useStoreCredit
+				? await storeCreditsService.getTokoBalance(storeId).catch(() => null)
+				: null;
 			if (freshBalance) setCreditBalance(freshBalance);
 			const freshAvailableCredit = Math.max(0, freshBalance?.availableBalance ?? freshBalance?.balance ?? availableCredit);
 			const freshCreditUsed = useStoreCredit ? Math.min(subtotal, freshAvailableCredit) : 0;

@@ -11,6 +11,19 @@ export const invoiceDraftStatusLabel: Record<string, string> = {
 	CANCELLED: "Dibatalkan",
 };
 
+/** Tahap retur menurut status backend: membedakan "menunggu akuntan" dari "selesai". */
+export const returnLifecycleLabel: Record<string, string> = {
+	REQUESTED: "Menunggu Pemeriksaan Gudang",
+	RECEIVED_BY_WAREHOUSE: "Diterima Gudang",
+	ACCOUNTING_REVIEW: "Menunggu Keputusan Akuntan",
+	CREDITED: "Selesai - Saldo Toko",
+	REPLACEMENT_PENDING: "Menunggu DO Pengganti",
+	REPLACED: "Selesai - Barang Pengganti",
+	RETURNED: "Selesai - Retur Barang",
+	REJECTED: "Ditolak",
+	CANCELLED: "Dibatalkan",
+};
+
 export const deliveryOrderStatusLabel: Record<string, string> = {
 	OPEN: "Baru Dibuat",
 	PICKING: "Sedang Pengambilan",

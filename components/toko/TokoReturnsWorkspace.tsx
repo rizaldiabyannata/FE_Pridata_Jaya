@@ -14,7 +14,7 @@ import ResponsiveTable, { type ResponsiveColumn } from "@/components/shared/Resp
 import { getApiErrorMessage } from "@/lib/api-errors";
 import { formatAppDateTime } from "@/lib/datetime";
 import { formatRupiah } from "@/lib/format";
-import type { StatusTone } from "@/lib/ui-labels";
+import { returnLifecycleLabel, type StatusTone } from "@/lib/ui-labels";
 import { deliveryOrdersService } from "@/services/delivery-orders";
 import { invoicesService, type InvoiceListItem } from "@/services/invoices";
 import { meService } from "@/services/me";
@@ -108,6 +108,12 @@ const statusLabel: Record<string, string> = {
 	APPROVED_DAMAGED: "Disetujui - Barang Rusak",
 	RETURNED: "Retur Barang Selesai",
 	REJECTED: "Ditolak",
+};
+
+const resolutionLabel: Record<string, string> = {
+	STORE_CREDIT: "Saldo Toko",
+	REPLACEMENT: "Barang Pengganti",
+	NONE: "Retur Barang Biasa",
 };
 
 const statusToneByReturn: Record<string, StatusTone> = {
@@ -487,9 +493,15 @@ export default function TokoReturnsWorkspace({
 			head: "Status",
 			role: "status",
 			render: (request) => (
-				<Badge tone={statusToneByReturn[request.status] ?? "neutral"}>
-					{statusLabel[request.status] ?? request.status}
-				</Badge>
+				<div>
+					<Badge tone={statusToneByReturn[request.status] ?? "neutral"}>
+						{statusLabel[request.status] ?? request.status}
+					</Badge>
+					{/* "Disetujui" saja tidak cukup: toko perlu tahu masih menunggu akuntan atau sudah selesai. */}
+					{request.lifecycleStatus && request.status !== "PENDING" && request.status !== "REJECTED" ? (
+						<p className="mt-1 text-xs text-slate-500">{returnLifecycleLabel[request.lifecycleStatus]}</p>
+					) : null}
+				</div>
 			),
 		},
 		{ key: "invoice", head: "Invoice", render: (request) => request.invoice?.invoiceNumber ?? "-" },
@@ -634,17 +646,17 @@ export default function TokoReturnsWorkspace({
 								{ label: "Invoice", value: selectedReturn.invoice?.invoiceNumber ?? "-" },
 								{ label: "Tanggal Pengajuan", value: formatAppDateTime(selectedReturn.submittedAt) },
 								{ label: "Status", value: statusLabel[selectedReturn.status] ?? selectedReturn.status },
+								{
+									label: "Tahap",
+									value: returnLifecycleLabel[selectedReturn.lifecycleStatus ?? ""] ?? "-",
+								},
 								{ label: "Nilai Retur Disetujui", value: formatRupiah(selectedReturn.approvedAmount) },
 								{ label: "Penyesuaian Tagihan Retur", value: formatRupiah(selectedReturn.invoiceAdjustmentAmount) },
 								{ label: "Saldo Toko", value: formatRupiah(selectedReturn.storeCreditAmount) },
 								{
 									label: "Penyelesaian",
-									value:
-										selectedReturn.excessResolution === "REPLACEMENT"
-											? "Barang Pengganti"
-											: selectedReturn.excessResolution === "NONE"
-												? "Retur Barang Biasa"
-												: "Saldo Toko",
+									// Hasil akhir bila sudah diputuskan; sebelum itu, pilihan toko.
+									value: resolutionLabel[selectedReturn.finalResolution ?? selectedReturn.excessResolution ?? "STORE_CREDIT"],
 								},
 								{ label: "Jumlah Item", value: `${selectedReturn.items.length} item` },
 							].map((item) => (
@@ -656,6 +668,13 @@ export default function TokoReturnsWorkspace({
 								</div>
 							))}
 						</div>
+
+						{selectedReturn.creditRejectionReason ? (
+							<div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+								<p className="type-label text-amber-700">Saldo toko tidak disetujui, diganti barang</p>
+								<p className="mt-2">{selectedReturn.creditRejectionReason}</p>
+							</div>
+						) : null}
 
 						{selectedReturn.replacementDeliveryOrder ? (
 							<div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">

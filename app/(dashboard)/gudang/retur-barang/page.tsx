@@ -8,19 +8,39 @@ import PaginationControls from "@/components/shared/PaginationControls";
 import { getApiErrorMessage } from "@/lib/api-errors";
 import { formatAppDateTime } from "@/lib/datetime";
 import { formatRupiah } from "@/lib/format";
+import { returnLifecycleLabel } from "@/lib/ui-labels";
 import {
 	storeReturnsService,
+	type ReturnLifecycleStatus,
 	type StoreReturnItemCondition,
 	type StoreReturnRequestItem,
 } from "@/services/store-returns";
 
 
-const statusTone: Record<string, string> = {
-	PENDING: "border border-amber-200 bg-amber-50 text-amber-700",
-	PARTIALLY_APPROVED: "border border-sky-200 bg-sky-50 text-sky-700",
-	APPROVED_GOOD: "border border-emerald-200 bg-emerald-50 text-emerald-700",
-	APPROVED_DAMAGED: "border border-rose-200 bg-rose-50 text-rose-700",
-	REJECTED: "border border-slate-200 bg-slate-50 text-slate-700",
+const WAITING_TONE = "border border-amber-200 bg-amber-50 text-amber-700";
+const DONE_TONE = "border border-emerald-200 bg-emerald-50 text-emerald-700";
+const lifecycleTone: Record<string, string> = {
+	REQUESTED: WAITING_TONE,
+	// Yang ini pekerjaan gudang berikutnya, jadi dibuat menonjol.
+	REPLACEMENT_PENDING: "border border-sky-300 bg-sky-100 text-sky-800",
+	ACCOUNTING_REVIEW: "border border-slate-200 bg-slate-50 text-slate-700",
+	CREDITED: DONE_TONE,
+	REPLACED: DONE_TONE,
+	RETURNED: DONE_TONE,
+};
+const NEUTRAL_TONE = "border border-slate-200 bg-slate-50 text-slate-700";
+
+const LIFECYCLE_FILTERS: Array<{ value: ReturnLifecycleStatus; label: string }> = [
+	{ value: "REQUESTED", label: "Menunggu pemeriksaan gudang" },
+	{ value: "REPLACEMENT_PENDING", label: "Menunggu DO pengganti" },
+	{ value: "ACCOUNTING_REVIEW", label: "Menunggu keputusan akuntan" },
+];
+
+const reviewSuccessMessage: Record<string, string> = {
+	REJECTED: "Retur ditolak.",
+	ACCOUNTING_REVIEW: "Barang diterima dan diteruskan ke review akuntan.",
+	REPLACEMENT_PENDING: "Barang diterima dan masuk antrean penggantian.",
+	RETURNED: "Barang diterima. Retur barang selesai dan tagihan sudah disesuaikan.",
 };
 
 type GudangDecision = "APPROVED_GOOD" | "APPROVED_DAMAGED" | "REJECTED";
@@ -71,6 +91,7 @@ export default function ReturBarangPage() {
 	const [success, setSuccess] = useState("");
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const [lifecycleFilter, setLifecycleFilter] = useState<ReturnLifecycleStatus | "">("");
 	const [page, setPage] = useState(1);
 	const [totalItems, setTotalItems] = useState(0);
 	const [totalPages, setTotalPages] = useState(1);
@@ -88,6 +109,7 @@ export default function ReturBarangPage() {
 				page,
 				limit: PAGE_SIZE,
 				search: debouncedSearch || undefined,
+				lifecycleStatus: lifecycleFilter || undefined,
 				sortBy: "submittedAt",
 				sortOrder: "desc",
 			});
@@ -106,7 +128,7 @@ export default function ReturBarangPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [debouncedSearch, page]);
+	}, [debouncedSearch, lifecycleFilter, page]);
 
 	useEffect(() => {
 		const timer = window.setTimeout(() => {
@@ -238,7 +260,7 @@ export default function ReturBarangPage() {
 						)
 						? "APPROVED_DAMAGED"
 						: "APPROVED_GOOD";
-			await storeReturnsService.review(activeRequest.id, {
+			const reviewed = await storeReturnsService.review(activeRequest.id, {
 				decision: resolvedDecision,
 				reviewNote: verificationNote.trim() || undefined,
 				items:
@@ -251,7 +273,8 @@ export default function ReturBarangPage() {
 						: reviewedItems,
 			});
 
-			setSuccess(activeRequest.excessResolution === "REPLACEMENT" ? "Barang diterima dan masuk antrean penggantian." : "Barang diterima dan diteruskan ke review akuntan.");
+			// Pesannya mengikuti status hasil dari server, bukan tebakan dari pilihan toko.
+			setSuccess(reviewSuccessMessage[reviewed.lifecycleStatus ?? ""] ?? "Verifikasi retur berhasil diproses.");
 			setActiveRequest(null);
 			setVerificationNote("");
 			setReviewItems([]);
@@ -357,6 +380,22 @@ export default function ReturBarangPage() {
 							placeholder="Cari request, toko, invoice, item..."
 							className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm sm:w-72"
 						/>
+						<select
+							aria-label="Filter tahap retur"
+							value={lifecycleFilter}
+							onChange={(event) => {
+								setLifecycleFilter(event.target.value as ReturnLifecycleStatus | "");
+								setPage(1);
+							}}
+							className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm sm:w-64"
+						>
+							<option value="">Semua tahap</option>
+							{LIFECYCLE_FILTERS.map((option) => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
 					</div>
 				</div>
 				<table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -406,9 +445,9 @@ export default function ReturBarangPage() {
 									</td>
 									<td className="px-4 py-3">
 										<span
-											className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone[request.status] ?? "border border-slate-200 bg-slate-50 text-slate-700"}`}
+											className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${lifecycleTone[request.lifecycleStatus ?? ""] ?? NEUTRAL_TONE}`}
 										>
-											{request.status}
+											{returnLifecycleLabel[request.lifecycleStatus ?? ""] ?? request.status}
 										</span>
 									</td>
 									<td className="px-4 py-3 text-right">
@@ -490,9 +529,9 @@ export default function ReturBarangPage() {
 							<div>
 								<p className="text-xs text-slate-500">Status</p>
 								<span
-									className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone[activeRequest.status] ?? "border border-slate-200 bg-slate-50 text-slate-700"}`}
+									className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${lifecycleTone[activeRequest.lifecycleStatus ?? ""] ?? NEUTRAL_TONE}`}
 								>
-									{activeRequest.status}
+									{returnLifecycleLabel[activeRequest.lifecycleStatus ?? ""] ?? activeRequest.status}
 								</span>
 							</div>
 							<div className="md:col-span-2">

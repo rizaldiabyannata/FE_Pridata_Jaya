@@ -109,6 +109,8 @@ export interface StoreReturnListParams {
 	sortBy?: "submittedAt" | "updatedAt";
 	sortOrder?: "asc" | "desc";
 	status?: StoreReturnStatus;
+	/** Status backend persis; mengalahkan `status` bila keduanya diisi. */
+	lifecycleStatus?: ReturnLifecycleStatus;
 	storeId?: string;
 	invoiceId?: string;
 	sourceWarehouseId?: string;
@@ -280,10 +282,10 @@ const toBackendStatus = (status?: StoreReturnStatus): string | undefined => {
 };
 
 const toBackendQuery = (params?: StoreReturnListParams) => {
-	const { status, sortBy, ...rest } = params ?? {};
+	const { status, lifecycleStatus, sortBy, ...rest } = params ?? {};
 	return {
 		...rest,
-		status: toBackendStatus(status),
+		status: lifecycleStatus ?? toBackendStatus(status),
 		sortBy: sortBy === "submittedAt" ? "requestedAt" : sortBy,
 	};
 };
