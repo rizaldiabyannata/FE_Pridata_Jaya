@@ -14,7 +14,7 @@ import ResponsiveTable, { type ResponsiveColumn } from "@/components/shared/Resp
 import { getApiErrorMessage } from "@/lib/api-errors";
 import { formatAppDateTime } from "@/lib/datetime";
 import { formatRupiah } from "@/lib/format";
-import { returnLifecycleLabel, type StatusTone } from "@/lib/ui-labels";
+import { deliveryOrderStatusLabel, returnLifecycleLabel, type StatusTone } from "@/lib/ui-labels";
 import { deliveryOrdersService } from "@/services/delivery-orders";
 import { invoicesService, type InvoiceListItem } from "@/services/invoices";
 import { meService } from "@/services/me";
@@ -257,6 +257,19 @@ export default function TokoReturnsWorkspace({
 		}
 		return map;
 	}, [records]);
+
+	const handleConfirmReplacement = async (deliveryOrderId: string, deliveryOrderNumber: string) => {
+		setError("");
+		setSuccess("");
+		try {
+			await deliveryOrdersService.confirmReceiptForToko(deliveryOrderId);
+			setSuccess(`Barang pengganti ${deliveryOrderNumber} berhasil dikonfirmasi diterima.`);
+			setSelectedReturn(null);
+			await load();
+		} catch (confirmError: unknown) {
+			setError(getApiErrorMessage(confirmError, "Gagal mengonfirmasi penerimaan barang pengganti."));
+		}
+	};
 
 	const eligibleOrders = useMemo(() => {
 		const query = search.trim().toLowerCase();
@@ -680,7 +693,12 @@ export default function TokoReturnsWorkspace({
 							<div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
 								<p className="type-label text-sky-700">Delivery Order Pengganti</p>
 								<p className="mt-2 font-semibold">{selectedReturn.replacementDeliveryOrder.deliveryOrderNumber}</p>
-								<p className="mt-1 text-xs">Status: {selectedReturn.replacementDeliveryOrder.status}</p>
+								<p className="mt-1 text-xs">Status: {deliveryOrderStatusLabel[selectedReturn.replacementDeliveryOrder.status] ?? selectedReturn.replacementDeliveryOrder.status}</p>
+								{selectedReturn.replacementDeliveryOrder.status === "SHIPPED" ? (
+									<Button className="mt-3" size="sm" onClick={() => void handleConfirmReplacement(selectedReturn.replacementDeliveryOrder!.id, selectedReturn.replacementDeliveryOrder!.deliveryOrderNumber)}>
+										Konfirmasi Barang Pengganti Diterima
+									</Button>
+								) : null}
 							</div>
 						) : null}
 

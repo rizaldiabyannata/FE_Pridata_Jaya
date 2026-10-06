@@ -12,7 +12,7 @@ export type StoreReturnStatus =
 	| "RETURNED"
 	| "REJECTED";
 
-export type ReturnLifecycleStatus = "REQUESTED" | "RECEIVED_BY_WAREHOUSE" | "ACCOUNTING_REVIEW" | "CREDITED" | "RETURNED" | "REPLACEMENT_PENDING" | "REPLACED" | "REJECTED" | "CANCELLED";
+export type ReturnLifecycleStatus = "REQUESTED" | "RECEIVED_BY_WAREHOUSE" | "ACCOUNTING_REVIEW" | "CREDITED" | "RETURNED" | "REPLACEMENT_PENDING" | "REPLACEMENT_CREATED" | "REPLACEMENT_SHIPPED" | "REPLACED" | "REJECTED" | "CANCELLED";
 
 export interface StoreReturnItem {
 	id: string;

@@ -18,6 +18,8 @@ export const returnLifecycleLabel: Record<string, string> = {
 	ACCOUNTING_REVIEW: "Menunggu Keputusan Akuntan",
 	CREDITED: "Selesai - Saldo Toko",
 	REPLACEMENT_PENDING: "Menunggu DO Pengganti",
+	REPLACEMENT_CREATED: "DO Pengganti Diproses Gudang",
+	REPLACEMENT_SHIPPED: "Barang Pengganti Dikirim",
 	REPLACED: "Selesai - Barang Pengganti",
 	RETURNED: "Selesai - Retur Barang",
 	REJECTED: "Ditolak",
