@@ -14,9 +14,9 @@ describe("warehouseInventoryService.availability", () => {
 		const rows = [{ productId: "p1", warehouseId: "w1", onHand: 3, reservedByActiveDo: 1, available: 2 }];
 		get.mockResolvedValue({ data: { data: rows } });
 
-		await expect(warehouseInventoryService.availability(["p1", "p2", "p1"], "w1")).resolves.toEqual(rows);
+		await expect(warehouseInventoryService.availability(["p1", "p2", "p1"], "w1", "GOOD")).resolves.toEqual(rows);
 		expect(get).toHaveBeenCalledWith("/warehouse-inventories/availability", {
-			params: { productIds: "p1,p2", warehouseId: "w1" },
+			params: { productIds: "p1,p2", warehouseId: "w1", condition: "GOOD" },
 		});
 	});
 
@@ -31,7 +31,7 @@ describe("warehouseInventoryService.availability", () => {
 
 		expect(get).toHaveBeenCalledTimes(2);
 		expect(get.mock.calls[0][1].params.productIds.split(",")).toHaveLength(200);
-		expect(get.mock.calls[1][1].params).toEqual({ productIds: "p200", warehouseId: undefined });
+		expect(get.mock.calls[1][1].params).toEqual({ productIds: "p200", warehouseId: undefined, condition: undefined });
 		expect(result).toEqual([{ productId: "p0" }, { productId: "p200" }]);
 	});
 

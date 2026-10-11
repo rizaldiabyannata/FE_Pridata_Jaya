@@ -192,18 +192,14 @@ function AgingPiutangPageContent() {
 		setActionError("");
 		setSuccess("");
 		try {
-			// Ekspor (BE /reports/receivables) belum menerima `ageBucket`: hanya pencarian dan status yang dikirim.
 			await receivableService.exportReceivables(format, {
 				search: filters.search.trim() || undefined,
 				status: serverFilters.status,
+				ageBucket: serverFilters.ageBucket,
 				sortBy: "invoiceDate",
 				sortOrder: "asc",
 			});
-			setSuccess(
-				`Export aging piutang dibuat. Cek status dan download di menu Log Ekspor.${
-					serverFilters.ageBucket ? " Filter umur piutang belum berlaku untuk ekspor: semua umur ikut diekspor." : ""
-				}`,
-			);
+			setSuccess("Export aging piutang dibuat. Cek status dan download di menu Log Ekspor.");
 		} catch (exportError: unknown) {
 			setActionError(getApiErrorMessage(exportError, "Gagal membuat export aging piutang."));
 		} finally {

@@ -66,27 +66,38 @@ describe("deliveryOrdersService", () => {
 
 describe("shippableStock", () => {
 	it("is 0 when the server returned no row for the pair", () => {
-		expect(shippableStock({ status: "OPEN", items: [] }, "p1", undefined)).toBe(0);
+		expect(shippableStock({ items: [] }, "p1", undefined)).toBe(0);
 	});
 
 	it("uses the server's available for a DO that holds no stock yet", () => {
-		const deliveryOrder = { status: "OPEN" as const, items: [item("p1", { ordered: 5 })] };
+		const deliveryOrder = { items: [item("p1", { ordered: 5 })] };
 		expect(shippableStock(deliveryOrder, "p1", row("w1", "p1", 10, 4))).toBe(6);
 	});
 
 	it("adds back the DO's own picked/packed units while it reserves", () => {
 		// 10 on hand, 7 reserved of which 5 are this DO's (max(picked 5, packed 3) - shipped 0).
-		const deliveryOrder = { status: "PACKING" as const, items: [item("p1", { ordered: 5, picked: 5, packed: 3 })] };
+		const deliveryOrder = { items: [item("p1", { ordered: 5, picked: 5, packed: 3 })] };
 		expect(shippableStock(deliveryOrder, "p1", row("w1", "p1", 10, 7))).toBe(8);
 	});
 
 	it("only adds back the lines of the asked product, net of what was shipped", () => {
 		const deliveryOrder = {
-			status: "PARTIALLY_SHIPPED" as const,
 			items: [item("p1", { picked: 6, packed: 6, shipped: 4 }), item("p2", { picked: 9 })],
 		};
 		// own reservation for p1 = 6 - 4 = 2; reserved 3 → 12 - 3 + 2.
 		expect(shippableStock(deliveryOrder, "p1", row("w1", "p1", 12, 3))).toBe(11);
+	});
+
+	it("adds back own GOOD lines whatever the status", () => {
+		const deliveryOrder = { items: [item("p1", { ordered: 5, picked: 5 })] };
+		expect(shippableStock(deliveryOrder, "p1", row("w1", "p1", 10, 5))).toBe(10);
+	});
+
+	it("ignores own non-GOOD lines, which the server does not reserve", () => {
+		const deliveryOrder = {
+			items: [{ ...item("p1", { picked: 4 }), condition: "DAMAGED" as const }],
+		};
+		expect(shippableStock(deliveryOrder, "p1", row("w1", "p1", 10, 2))).toBe(8);
 	});
 });
 

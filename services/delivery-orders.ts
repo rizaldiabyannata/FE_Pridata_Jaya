@@ -126,26 +126,22 @@ export const ACTIVE_DELIVERY_ORDER_STATUSES: DeliveryOrderStatus[] = [
 	"PARTIALLY_SHIPPED",
 ];
 
-/** Status yang menahan stok di `availableStockCte` backend (OPEN belum menahan). */
-const RESERVING_STATUSES: DeliveryOrderStatus[] = ["PICKING", "PACKING", "READY_TO_SHIP", "PARTIALLY_SHIPPED"];
-
 const withStatusList = <T extends { status?: DeliveryOrderStatus | DeliveryOrderStatus[] }>(params?: T) =>
 	params && Array.isArray(params.status) ? { ...params, status: params.status.join(",") } : params;
 
 /**
  * Stok yang bisa dipakai untuk mengirim `productId` dari DO ini. `reservedByActiveDo` di server
- * sudah ikut menahan barang yang di-pick/pack oleh DO ini sendiri, jadi bagian itu dikembalikan.
+ * (diminta dengan `condition: GOOD`) menahan barang GOOD yang di-pick/pack oleh DO ini sendiri, jadi bagian itu dikembalikan.
  * Baris yang tidak ada di respons ketersediaan berarti stok 0.
  */
 export const shippableStock = (
-	deliveryOrder: Pick<DeliveryOrderListItem, "status" | "items">,
+	deliveryOrder: Pick<DeliveryOrderListItem, "items">,
 	productId: string,
 	row?: StockAvailability,
 ) => {
 	if (!row) return 0;
-	if (!RESERVING_STATUSES.includes(deliveryOrder.status)) return row.available;
 	const ownReserved = deliveryOrder.items
-		.filter((item) => item.productId === productId)
+		.filter((item) => item.productId === productId && item.condition === "GOOD")
 		.reduce(
 			(sum, item) =>
 				sum + Math.max(Math.max(item.pickedQuantity, item.packedQuantity) - item.shippedQuantity, 0),

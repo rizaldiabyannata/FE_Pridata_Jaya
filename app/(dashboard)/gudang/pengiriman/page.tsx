@@ -288,7 +288,7 @@ function PengirimanPageContent() {
 		if (!stockProductKey) return;
 		let active = true;
 		warehouseInventoryService
-			.availability(stockProductKey.split(","))
+			.availability(stockProductKey.split(","), undefined, "GOOD")
 			.then((rows) => {
 				if (!active) return;
 				setStock({ key: stockProductKey, rows: indexAvailability(rows) });

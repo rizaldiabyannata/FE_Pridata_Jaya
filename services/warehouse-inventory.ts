@@ -109,7 +109,7 @@ export interface StockLevelSummary {
 export interface StockAvailability {
 	productId: string;
 	warehouseId: string;
-	/** Unit GOOD + NEW di gudang. */
+	/** Unit di gudang: GOOD + NEW, atau hanya kondisi yang diminta lewat `condition`. */
 	onHand: number;
 	/** Unit yang sudah di-pick/pack tapi belum dikirim oleh DO aktif dari gudang ini. */
 	reservedByActiveDo: number;
@@ -154,7 +154,7 @@ export const warehouseInventoryService = {
 	 * Stok jual per produk-gudang untuk produk yang diminta saja. Tanpa `warehouseId` semua gudang
 	 * (dalam cakupan akun) dikembalikan. Pasangan tanpa stok GOOD/NEW tidak ikut, artinya 0.
 	 */
-	async availability(productIds: string[], warehouseId?: string): Promise<StockAvailability[]> {
+	async availability(productIds: string[], warehouseId?: string, condition?: "NEW" | "GOOD"): Promise<StockAvailability[]> {
 		const ids = [...new Set(productIds)];
 		const batches: string[][] = [];
 		for (let start = 0; start < ids.length; start += AVAILABILITY_BATCH_SIZE) {
@@ -163,7 +163,7 @@ export const warehouseInventoryService = {
 		const responses = await Promise.all(
 			batches.map((batch) =>
 				apiClient.get<ApiResponse<StockAvailability[]>>("/warehouse-inventories/availability", {
-					params: { productIds: batch.join(","), warehouseId },
+					params: { productIds: batch.join(","), warehouseId, condition },
 				}),
 			),
 		);
